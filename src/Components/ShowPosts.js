@@ -1,11 +1,18 @@
 import axios from "axios";
 import React, { useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, Button } from "react-bootstrap";
+import { Card, Button, Container } from "react-bootstrap";
 import "./ShowPosts.css";
 import "./form.css";
-import { Keypair, SystemProgram, PublicKey } from "@solana/web3.js";
-
+import {
+  Keypair,
+  SystemProgram,
+  PublicKey,
+  Transaction,
+  sendAndConfirmTransaction,
+} from "@solana/web3.js";
+import * as web3 from "@solana/web3.js";
+const { LAMPORTS_PER_SOL} = require("@solana/web3.js");
 const ShowPosts = ({ account, contract }) => {
   const [data, setData] = useState([]);
   useEffect(() => {
@@ -114,7 +121,7 @@ const ShowPosts = ({ account, contract }) => {
                   <div className="btn-center">
                     <button
                       className="button"
-                      onClick={() => {
+                      onClick={async () => {
                         if (from_row <= 0 || to_row > post.row) {
                           alert("enter rows again");
                           return;
@@ -129,22 +136,78 @@ const ShowPosts = ({ account, contract }) => {
                           }
                           var purchased_file = Keypair.generate();
                           var file_id = new PublicKey(post._id);
-                          console.log("file_id:", file_id.toString());
-                          console.log(
-                            "purchased file:",
-                            purchased_file.publicKey.toString()
+                          var file_author = new PublicKey(post.author);
+                          console.log(post.author);
+                          (async () => {
+                          // Connect to cluster
+                          console.log(web3.clusterApiUrl('devnet'))
+                          const connection = new web3.Connection(
+                            web3.clusterApiUrl('devnet'),
+                            'confirmed',
                           );
-                          contract.rpc.buyFile(from_row, to_row, selected_idx, {
-                            accounts: {
-                              buyer: purchased_file.publicKey.toString(),
-                              seller: file_id.toString(),
-                              author: account,
-                              systemProgram: SystemProgram.programId,
-                            },
-                            signers: [purchased_file],
-                          }).then((data) => {
-                            console.log("yee haw!", data);
-                          });
+                          let fromKeypair = new PublicKey(account);
+                        
+                          let toKeypair = new PublicKey(post.author);
+                          let transaction = new Transaction();
+                          console.log(fromKeypair);
+                          console.log(typeof fromKeypair)
+                          transaction.add(
+                            SystemProgram.transfer({
+                              fromPubkey: fromKeypair,
+                              toPubkey: toKeypair,
+                              lamports: LAMPORTS_PER_SOL
+                            })
+                          )
+                          const blockHash = await connection.getLatestBlockhash()
+transaction.feePayer = fromKeypair
+transaction.recentBlockhash = await blockHash.blockhash
+                          
+
+                          const { signature } = await window.solana.signAndSendTransaction(transaction);
+                          await connection.confirmTransaction(signature);
+                          })();
+                          // var transaction = new web3.Transaction().add(
+                          //   web3.SystemProgram.transfer({
+                          //     fromPubkey: account,
+                          //     toPubkey: file_author,
+                          //     lamports: 1000000000,
+                          //   })
+                          // );
+
+                          // transaction.feePayer = provider.publicKey;
+                          // let blockhashObj =
+                          //   await connection.getLatestBlockhash();
+                          // transaction.recentBlockhash =
+                          //   await blockhashObj.blockhash;
+
+                          // let signed = await provider.signTransaction(
+                          //   transaction
+                          // );
+                          // let signature = await connection.sendRawTransaction(
+                          //   signed.serialize()
+                          // );
+
+                          // await connection.confirmTransaction(signature);
+                          // console.log("signature:", signature);
+                          // contract.provider.connection.confirmTransaction(tx);
+
+                          // contract.provider.connection
+                          //   .confirmTransaction(tx)
+                          //   .then(() => {
+                          //     contract.rpc
+                          //       .buyFile(from_row, to_row, selected_idx, {
+                          //         accounts: {
+                          //           buyer: purchased_file.publicKey.toString(),
+                          //           seller: file_id.toString(),
+                          //           author: account,
+                          //           systemProgram: SystemProgram.programId,
+                          //         },
+                          //         signers: [purchased_file],
+                          //       })
+                          //       .then((data) => {
+                          //         console.log("yee haw!", data);
+                          //       });
+                          //   });
 
                           for (var i = from_row; i <= to_row; i++) {
                             for (var j = 0; j < selected_idx.length; j++) {

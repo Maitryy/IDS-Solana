@@ -37,6 +37,7 @@ const LandingPage = ({ account, contract }) => {
         col_title,
         keys,
         _id,
+        author: account.toString(),
       };
 
       if (!description || !title || !keyword || !row || !col) {
