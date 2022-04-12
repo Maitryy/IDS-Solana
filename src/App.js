@@ -1,43 +1,49 @@
-import React, { useEffect, useState } from 'react';
-import twitterLogo from './assets/twitter-logo.svg';
-import './App.css';
+import React, { useEffect, useState } from "react";
+import { Connection, PublicKey, clusterApiUrl } from "@solana/web3.js";
+import { Program, Provider, web3 } from "@project-serum/anchor";
+import idl from "./idl.json";
+import "./App.css";
+import LandingPage from "./Components/LandingPage.js";
 
-// Constants
-const TWITTER_HANDLE = '_buildspace';
-const TWITTER_LINK = `https://twitter.com/${TWITTER_HANDLE}`;
+const { SystemProgram, Keypair } = web3;
+let baseAccount = Keypair.generate();
+const programID = new PublicKey(idl.metadata.address);
+const network = clusterApiUrl("devnet");
+const opts = {
+  preflightCommitment: "processed",
+};
 
 const App = () => {
-  // State
   const [walletAddress, setWalletAddress] = useState(null);
+  const [contract, setContract] = useState(null);
 
-  // Actions
+  const getProvider = () => {
+    const connection = new Connection(network, opts.preflightCommitment);
+    const provider = new Provider(
+      connection,
+      window.solana,
+      opts.preflightCommitment
+    );
+    return provider;
+  };
+
   const checkIfWalletIsConnected = async () => {
     try {
       const { solana } = window;
-
       if (solana) {
         if (solana.isPhantom) {
-          console.log('Phantom wallet found!');
           const response = await solana.connect();
-          console.log(
-            'Connected with Public Key:',
-            response.publicKey.toString()
-          );
-
-          /*
-           * Set the user's publicKey in state to be used later!
-           */
           setWalletAddress(response.publicKey.toString());
         }
       } else {
-        alert('Solana object not found! Get a Phantom Wallet 👻');
+        alert("Solana object not found! Get a Phantom Wallet 👻");
       }
     } catch (error) {
       console.error(error);
     }
   };
 
-  const connectWallet = async () => {};
+  const connectWallet = () => {};
 
   const renderNotConnectedContainer = () => (
     <button
@@ -48,36 +54,40 @@ const App = () => {
     </button>
   );
 
-  // UseEffects
+  const getSmartContract = async () => {
+    try {
+      const provider = getProvider();
+      const program = new Program(idl, programID, provider);
+      setContract(program);
+    } catch (error) {
+      console.log("Error in getSmartContract: ", error);
+      setContract(null);
+    }
+  };
+
+  useEffect(() => {
+    if (walletAddress) {
+      console.log("Fetching Smart Contract -_<");
+      getSmartContract();
+    }
+  }, [walletAddress]);
+
   useEffect(() => {
     const onLoad = async () => {
       await checkIfWalletIsConnected();
     };
-    window.addEventListener('load', onLoad);
-    return () => window.removeEventListener('load', onLoad);
+    window.addEventListener("load", onLoad);
+    return () => window.removeEventListener("load", onLoad);
   }, []);
 
   return (
-    <div className="App">
-			{/* This was solely added for some styling fanciness */}
-			<div className={walletAddress ? 'authed-container' : 'container'}>
-        <div className="header-container">
-          <p className="header">🖼 GIF Portal</p>
-          <p className="sub-text">
-            View your GIF collection in the metaverse ✨
-          </p>
-          {/* Add the condition to show this only if we don't have a wallet address */}
-          {!walletAddress && renderNotConnectedContainer()}
-        </div>
-        <div className="footer-container">
-          <img alt="Twitter Logo" className="twitter-logo" src={twitterLogo} />
-          <a
-            className="footer-text"
-            href={TWITTER_LINK}
-            target="_blank"
-            rel="noreferrer"
-          >{`built on @${TWITTER_HANDLE}`}</a>
-        </div>
+    <div className="container">
+      <div>
+        {!walletAddress ? (
+          renderNotConnectedContainer()
+        ) : (
+          <LandingPage account={walletAddress} contract={contract} />
+        )}
       </div>
     </div>
   );
