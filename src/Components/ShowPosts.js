@@ -12,7 +12,9 @@ import {
   sendAndConfirmTransaction,
 } from "@solana/web3.js";
 import * as web3 from "@solana/web3.js";
-const { LAMPORTS_PER_SOL} = require("@solana/web3.js");
+import CryptoJS from "crypto-js";
+const { LAMPORTS_PER_SOL } = require("@solana/web3.js");
+
 const ShowPosts = ({ account, contract }) => {
   const [data, setData] = useState([]);
   useEffect(() => {
@@ -122,6 +124,7 @@ const ShowPosts = ({ account, contract }) => {
                     <button
                       className="button"
                       onClick={async () => {
+                        var fetched_file_data;
                         if (from_row <= 0 || to_row > post.row) {
                           alert("enter rows again");
                           return;
@@ -136,86 +139,99 @@ const ShowPosts = ({ account, contract }) => {
                           }
                           var purchased_file = Keypair.generate();
                           var file_id = new PublicKey(post._id);
-                          var file_author = new PublicKey(post.author);
-                          console.log(post.author);
+                          // var file_author = new PublicKey(post.author);
+                          // console.log(post.author);
                           (async () => {
-                          // Connect to cluster
-                          console.log(web3.clusterApiUrl('devnet'))
-                          const connection = new web3.Connection(
-                            web3.clusterApiUrl('devnet'),
-                            'confirmed',
-                          );
-                          let fromKeypair = new PublicKey(account);
-                        
-                          let toKeypair = new PublicKey(post.author);
-                          let transaction = new Transaction();
-                          console.log(fromKeypair);
-                          console.log(typeof fromKeypair)
-                          transaction.add(
-                            SystemProgram.transfer({
-                              fromPubkey: fromKeypair,
-                              toPubkey: toKeypair,
-                              lamports: LAMPORTS_PER_SOL
-                            })
-                          )
-                          const blockHash = await connection.getLatestBlockhash()
-transaction.feePayer = fromKeypair
-transaction.recentBlockhash = await blockHash.blockhash
-                          
+                            // Connect to cluster
+                            // console.log(web3.clusterApiUrl("devnet"));
+                            const connection = new web3.Connection(
+                              web3.clusterApiUrl("devnet"),
+                              "confirmed"
+                            );
+                            let fromKeypair = new PublicKey(account);
+                            let toKeypair = new PublicKey(post.author);
+                            let transaction = new Transaction();
 
-                          const { signature } = await window.solana.signAndSendTransaction(transaction);
-                          await connection.confirmTransaction(signature);
+                            transaction.add(
+                              SystemProgram.transfer({
+                                fromPubkey: fromKeypair,
+                                toPubkey: toKeypair,
+                                lamports: LAMPORTS_PER_SOL,
+                              })
+                            );
+                            const blockHash =
+                              await connection.getLatestBlockhash();
+                            transaction.feePayer = fromKeypair;
+                            transaction.recentBlockhash =
+                              await blockHash.blockhash;
+
+                            const { signature } =
+                              await window.solana.signAndSendTransaction(
+                                transaction
+                              );
+                            await connection
+                              .confirmTransaction(signature)
+                              .then(() => {
+                                contract.rpc
+                                  .buyFile(from_row - 1, to_row, selected_idx, {
+                                    accounts: {
+                                      buyer:
+                                        purchased_file.publicKey.toString(),
+                                      seller: file_id.toString(),
+                                      author: account,
+                                      systemProgram: SystemProgram.programId,
+                                    },
+                                    signers: [purchased_file],
+                                  })
+                                  .then((data) => {
+                                    contract.account.file
+                                      .fetch(purchased_file.publicKey)
+                                      .then((fetched_data) => {
+                                        fetched_file_data = fetched_data.data;
+                                        var file_idx = 0;
+                                        var decrypted =
+                                          "data:text/csv;charset=utf-8,";
+                                        console.log(fetched_file_data);
+                                        for (
+                                          var i = from_row;
+                                          i <= to_row;
+                                          i++
+                                        ) {
+                                          for (
+                                            var j = 0;
+                                            j < selected_idx.length;
+                                            j++
+                                          ) {
+                                            var taken_key =
+                                              (i - 1) * post.col +
+                                              selected_idx[j];
+                                            // console.log("taken key ", post.keys[taken_key]);
+                                            var tmp = CryptoJS.AES.decrypt(
+                                              fetched_file_data[file_idx],
+                                              post.keys[taken_key]
+                                            );
+                                            file_idx++;
+                                            var tmp2 = JSON.parse(
+                                              tmp.toString(CryptoJS.enc.Utf8)
+                                            );
+                                            decrypted += tmp2;
+                                            decrypted += ",";
+                                          }
+                                          decrypted += "\n";
+                                        }
+                                        var encodedUri = encodeURI(decrypted);
+                                        var link = document.createElement("a");
+                                        link.setAttribute("href", encodedUri);
+                                        link.setAttribute(
+                                          "download",
+                                          "dummy_riya.csv"
+                                        );
+                                        document.body.appendChild(link); // Required for FF
+                                        link.click(); // This will download the data file named "my_data.csv".
+                                      });
+                                  });
+                              });
                           })();
-                          // var transaction = new web3.Transaction().add(
-                          //   web3.SystemProgram.transfer({
-                          //     fromPubkey: account,
-                          //     toPubkey: file_author,
-                          //     lamports: 1000000000,
-                          //   })
-                          // );
-
-                          // transaction.feePayer = provider.publicKey;
-                          // let blockhashObj =
-                          //   await connection.getLatestBlockhash();
-                          // transaction.recentBlockhash =
-                          //   await blockhashObj.blockhash;
-
-                          // let signed = await provider.signTransaction(
-                          //   transaction
-                          // );
-                          // let signature = await connection.sendRawTransaction(
-                          //   signed.serialize()
-                          // );
-
-                          // await connection.confirmTransaction(signature);
-                          // console.log("signature:", signature);
-                          // contract.provider.connection.confirmTransaction(tx);
-
-                          // contract.provider.connection
-                          //   .confirmTransaction(tx)
-                          //   .then(() => {
-                          //     contract.rpc
-                          //       .buyFile(from_row, to_row, selected_idx, {
-                          //         accounts: {
-                          //           buyer: purchased_file.publicKey.toString(),
-                          //           seller: file_id.toString(),
-                          //           author: account,
-                          //           systemProgram: SystemProgram.programId,
-                          //         },
-                          //         signers: [purchased_file],
-                          //       })
-                          //       .then((data) => {
-                          //         console.log("yee haw!", data);
-                          //       });
-                          //   });
-
-                          for (var i = from_row; i <= to_row; i++) {
-                            for (var j = 0; j < selected_idx.length; j++) {
-                              var taken_key =
-                                (i - 1) * post.col + selected_idx[j];
-                              console.log("taken key ", post.keys[taken_key]);
-                            }
-                          }
                         }
                       }}
                     >

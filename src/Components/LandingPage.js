@@ -8,10 +8,9 @@ import "./form.css";
 import CSVReader from "react-csv-reader";
 import randomstring from "randomstring";
 import CryptoJS from "crypto-js";
-import { Keypair, SystemProgram } from "@solana/web3.js";
+import { Keypair, SystemProgram, PublicKey } from "@solana/web3.js";
 
 const LandingPage = ({ account, contract }) => {
-  console.log("here:", account);
   const [description, getDescription] = useState("");
   const [title, gettitle] = useState("");
   const [keyword, getkeyword] = useState("");
@@ -45,15 +44,16 @@ const LandingPage = ({ account, contract }) => {
       }
 
       const file_id = Keypair.generate();
+      var post_author = new PublicKey(account);
       Post._id = file_id.publicKey.toString();
       contract.rpc
         .addFile(row, col, file, {
           accounts: {
-            file: file_id.publicKey,
-            author: account,
+            file: file_id.publicKey,  // public key
+            author: post_author,  // public key -> not a string or address
             systemProgram: SystemProgram.programId,
           },
-          signers: [file_id],
+          signers: [file_id], // public key
         })
         .then(() => {
           axios
