@@ -92,7 +92,7 @@ const ShowPosts = ({ account, contract }) => {
                           </select>
                         </th>
                         <th>
-                          <h3> Rows available :{post.row}</h3>
+                          <h3 style={{color:"white"}}> Rows available :{post.row}</h3>
                           <label for="rowss" style={{ color: "white" }}>
                             Enter starting row:
                           </label>
@@ -156,7 +156,7 @@ const ShowPosts = ({ account, contract }) => {
                               SystemProgram.transfer({
                                 fromPubkey: fromKeypair,
                                 toPubkey: toKeypair,
-                                lamports: LAMPORTS_PER_SOL,
+                                lamports: 0.1*LAMPORTS_PER_SOL*(to_row-from_row)+0.1*LAMPORTS_PER_SOL*(selected_options.length),
                               })
                             );
                             const blockHash =
