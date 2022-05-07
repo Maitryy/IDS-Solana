@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { Card, Button, Container } from "react-bootstrap";
 import "./ShowPosts.css";
 import "./form.css";
+import { create } from "ipfs-http-client";
+
 import {
   Keypair,
   SystemProgram,
@@ -14,6 +16,9 @@ import {
 import * as web3 from "@solana/web3.js";
 import CryptoJS from "crypto-js";
 const { LAMPORTS_PER_SOL } = require("@solana/web3.js");
+const fs = require("fs")
+var chunk_str = "";
+
 
 const ShowPosts = ({ account, contract }) => {
   const [data, setData] = useState([]);
@@ -29,6 +34,54 @@ const ShowPosts = ({ account, contract }) => {
   function showText(toggleText) {
     toggleText.classList.toggle("active");
   }
+
+  async function ipfsClient() {
+    const ipfs = await create(
+        {
+            host: "ipfs.infura.io",
+            port: 5001,
+            protocol: "https"
+        }
+    );
+    return ipfs;
+}
+
+async function saveText() {
+  let ipfs = await ipfsClient();
+
+  let result = await ipfs.add(`welcome ${new Date()}`);
+  console.log(result);
+}
+// saveText();
+
+// async function saveFile() {
+
+//   let ipfs = await ipfsClient();
+
+//   let data = fs.readFileSync("./package.json")
+//   let options = {
+//       warpWithDirectory: false,
+//       progress: (prog) => console.log(`Saved :${prog}`)
+//   }
+//   let result = await ipfs.add(data, options);
+//   console.log(result)
+// }
+// saveFile()
+
+async function getData(hash) {
+  let ipfs = await ipfsClient();
+
+  let asyncitr = ipfs.cat(hash)
+  var data="";
+  for await (const itr of asyncitr) {
+
+      data += Buffer.from(itr).toString()
+      // console.log(data)
+  }
+  console.log(data, "data");
+  // fetched_file_data = data;
+  chunk_str = data;
+}
 
   return (
     <div>
@@ -124,7 +177,7 @@ const ShowPosts = ({ account, contract }) => {
                     <button
                       className="button"
                       onClick={async () => {
-                        var fetched_file_data;
+                        var fetched_file_data, fetched_file_hash;
                         if (from_row <= 0 || to_row > post.row) {
                           alert("enter rows again");
                           return;
@@ -172,65 +225,89 @@ const ShowPosts = ({ account, contract }) => {
                             await connection
                               .confirmTransaction(signature)
                               .then(() => {
-                                contract.rpc
-                                  .buyFile(from_row - 1, to_row, selected_idx, {
-                                    accounts: {
-                                      buyer:
-                                        purchased_file.publicKey.toString(),
-                                      seller: file_id.toString(),
-                                      author: account,
-                                      systemProgram: SystemProgram.programId,
-                                    },
-                                    signers: [purchased_file],
-                                  })
-                                  .then((data) => {
+                                // contract.rpc
+                                //   .buyFile(from_row - 1, to_row, selected_idx, {
+                                //     accounts: {
+                                //       buyer:
+                                //         purchased_file.publicKey.toString(),
+                                //       seller: file_id.toString(),
+                                //       author: account,
+                                //       systemProgram: SystemProgram.programId,
+                                //     },
+                                //     signers: [purchased_file],
+                                //   })
+                                //   .then((data) => {
                                     contract.account.file
-                                      .fetch(purchased_file.publicKey)
-                                      .then((fetched_data) => {
-                                        fetched_file_data = fetched_data.data;
+                                      // .fetch(purchased_file.publicKey)
+                                      .fetch(file_id)
+                                      .then( async (fetched_data) => {
+                                        // fetched_file_data = fetched_data.data;
+                                        fetched_file_hash = fetched_data.hash;
+                                        // (async () => {
+                                        // console.log(await getData())
+                                        await getData(fetched_file_hash)
+                                        
+                                        // console.log("hash", hash_ipfs);
+                                        var chunk_arr = chunk_str.split(',')
+                                        fetched_file_data = []
+                                        
+                                        var n_rows = to_row - from_row + 1;
+                                        var n_cols = selected_idx.length;
+                                        // for( var i = 0; i<n_rows; i++)
+                                        // {
+                                        //   for(var j=0; j<n_cols; j++)
+                                        //   {
+                                        //     fetched_file_data.push(chunk_arr[(from_row-1 +i)*(fetched_data.ncols) + selected_idx[j]]);
+                                        //   }
+                                        // }
+                                        // fetched_file_data.push("priti");
                                         var file_idx = 0;
                                         var decrypted =
                                           "data:text/csv;charset=utf-8,";
-                                        console.log(fetched_file_data);
-                                        for (
-                                          var i = from_row;
-                                          i <= to_row;
-                                          i++
-                                        ) {
-                                          for (
-                                            var j = 0;
-                                            j < selected_idx.length;
-                                            j++
-                                          ) {
-                                            var taken_key =
-                                              (i - 1) * post.col +
-                                              selected_idx[j];
+                                        // console.log(fetched_file_data);
+                                        console.log("i", from_row);
+                                        console.log("i_to", to_row);
+                                        // console.log("j", selected_idx.length);
+                                        // console.log("j_to", to_row);
+                                        for (var i = from_row; i <= to_row; i++)
+                                         {
+                                          //  console.log(" ")
+                                          for (var j = 0; j < selected_idx.length; j++) 
+                                           {
+                                              // console.log("priti pagal pakka h ")
+                                            var taken_key = (i - 1) * post.col + selected_idx[j];
                                             // console.log("taken key ", post.keys[taken_key]);
                                             var tmp = CryptoJS.AES.decrypt(
-                                              fetched_file_data[file_idx],
+                                              // fetched_file_data[file_idx],
+                                              chunk_arr[taken_key],
                                               post.keys[taken_key]
                                             );
                                             file_idx++;
                                             var tmp2 = JSON.parse(
                                               tmp.toString(CryptoJS.enc.Utf8)
                                             );
+                                            // console.log("tmp2", tmp2);
                                             decrypted += tmp2;
                                             decrypted += ",";
                                           }
                                           decrypted += "\n";
                                         }
+                                        console.log(decrypted, "decrypted")
                                         var encodedUri = encodeURI(decrypted);
                                         var link = document.createElement("a");
                                         link.setAttribute("href", encodedUri);
                                         link.setAttribute(
                                           "download",
-                                          "dummy_riya.csv"
+                                          "downloaded_data.csv"
                                         );
                                         document.body.appendChild(link); // Required for FF
                                         link.click(); // This will download the data file named "my_data.csv".
+                                        // })
+                                        // getData(fetched_file_hash)
+                                        
                                       });
                                   });
-                              });
+                              // });
                           })();
                         }
                       }}

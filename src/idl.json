@@ -3,7 +3,7 @@
   "name": "data_share",
   "instructions": [
     {
-      "name": "addFile",
+      "name": "sendFile",
       "accounts": [
         {
           "name": "file",
@@ -31,51 +31,8 @@
           "type": "u32"
         },
         {
-          "name": "data",
-          "type": {
-            "vec": "string"
-          }
-        }
-      ]
-    },
-    {
-      "name": "buyFile",
-      "accounts": [
-        {
-          "name": "buyer",
-          "isMut": true,
-          "isSigner": true
-        },
-        {
-          "name": "seller",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "author",
-          "isMut": true,
-          "isSigner": true
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "fromrow",
-          "type": "u32"
-        },
-        {
-          "name": "torow",
-          "type": "u32"
-        },
-        {
-          "name": "colno",
-          "type": {
-            "vec": "u32"
-          }
+          "name": "hash",
+          "type": "string"
         }
       ]
     }
@@ -99,10 +56,8 @@
             "type": "u32"
           },
           {
-            "name": "data",
-            "type": {
-              "vec": "string"
-            }
+            "name": "hash",
+            "type": "string"
           }
         ]
       }

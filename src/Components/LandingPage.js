@@ -9,6 +9,9 @@ import CSVReader from "react-csv-reader";
 import randomstring from "randomstring";
 import CryptoJS from "crypto-js";
 import { Keypair, SystemProgram, PublicKey } from "@solana/web3.js";
+const { create } = require("ipfs-http-client");
+const fs = require("fs")
+var hash_ipfs="";
 
 const LandingPage = ({ account, contract }) => {
   const [description, getDescription] = useState("");
@@ -22,6 +25,54 @@ const LandingPage = ({ account, contract }) => {
   const [_id, get_id] = useState("");
 
   const history = useNavigate();
+  
+async function ipfsClient() {
+    const ipfs = await create(
+        {
+            host: "ipfs.infura.io",
+            port: 5001,
+            protocol: "https"
+        }
+    );
+    return ipfs;
+}
+
+
+async function saveText(string_data) {
+    let ipfs = await ipfsClient();
+    
+    let result = await ipfs.add(string_data);
+    console.log(result.path, "result");
+    hash_ipfs = await result.path.toString();
+    // hash_ipfs = await result.path;
+}
+// saveText();
+
+// async function saveFile() {
+
+//     let ipfs = await ipfsClient();
+
+//     let data = fs.readFileSync("./package.json")
+//     let options = {
+//         warpWithDirectory: false,
+//         progress: (prog) => console.log(`Saved :${prog}`)
+//     }
+//     let result = await ipfs.add(data, options);
+//     console.log(result)
+// }
+// saveFile()
+
+async function getData(hash) {
+    let ipfs = await ipfsClient();
+
+    let asyncitr = ipfs.cat(hash)
+
+    for await (const itr of asyncitr) {
+
+        let data = Buffer.from(itr).toString()
+        console.log(data, "data")
+    }
+}
 
   async function takeInfo(e) {
     e.preventDefault();
@@ -43,11 +94,24 @@ const LandingPage = ({ account, contract }) => {
         alert("enter all");
       }
 
+      
       const file_id = Keypair.generate();
+      (async () => {
+        // console.log(await getData())
+        
       var post_author = new PublicKey(account);
       Post._id = file_id.publicKey.toString();
-      contract.rpc
-        .addFile(row, col, file, {
+      
+      var file_str = file.toString();
+      console.log(contract);
+        await saveText(file_str)
+        
+        console.log("hash", typeof(hash_ipfs));
+
+
+        // getData(hash_ipfs);
+        contract.rpc
+        .sendFile(row, col, hash_ipfs, {
           accounts: {
             file: file_id.publicKey,  // public key
             author: post_author,  // public key -> not a string or address
@@ -65,6 +129,8 @@ const LandingPage = ({ account, contract }) => {
               console.log("Error: ", error);
             });
         });
+      })()
+      
     } catch (err) {
       console.error(err);
     }
@@ -77,6 +143,7 @@ const LandingPage = ({ account, contract }) => {
         <div class="contact-box">
           <div class="contact-links">
             <h2>INCENTIVISED DATA SHARING </h2>
+            {/* {saveText()} */}
             <br />
             <br />
 
@@ -173,6 +240,13 @@ const LandingPage = ({ account, contract }) => {
                       getkeys(keys);
                       getFile(file);
                       getcol_title(data[0].join(","));
+                      
+                     
+                      
+                        // getData(hash_ipfs)
+                        
+                      // console.log("hash", hash_ipfs);
+                      
                     }}
                   />
                 </div>
