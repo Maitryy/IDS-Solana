@@ -228,6 +228,7 @@ async function getData(hash) {
                       getcol(data.length == 0 ? 0 : data[0].length);
                       for (var row of data) {
                         for (var str of row) {
+                          str = str.trim();
                           var key = randomstring.generate(str.length);
                           var ciphertext = CryptoJS.AES.encrypt(
                             JSON.stringify(str),
@@ -235,10 +236,12 @@ async function getData(hash) {
                           ).toString();
                           keys.push(key);
                           file.push(ciphertext);
+                          // file.push(str);
                         }
                       }
                       getkeys(keys);
                       getFile(file);
+                      // var tmp_col = data[0]
                       getcol_title(data[0].join(","));
                       
                      

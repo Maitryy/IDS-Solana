@@ -186,9 +186,10 @@ async function getData(hash) {
                           return;
                         } else {
                           for (var i = 0; i < selected_options.length; i++) {
-                            var s1 = selected_options[i].text;
+                            var s1 = selected_options[i].text.toString();
                             var x = options_idx.get(s1);
                             selected_idx.push(x);
+
                           }
                           var purchased_file = Keypair.generate();
                           var file_id = new PublicKey(post._id);
@@ -248,6 +249,7 @@ async function getData(hash) {
                                         await getData(fetched_file_hash)
                                         
                                         // console.log("hash", hash_ipfs);
+                                        console.log(chunk_str, "chunk_str");
                                         var chunk_arr = chunk_str.split(',')
                                         fetched_file_data = []
                                         
@@ -263,47 +265,44 @@ async function getData(hash) {
                                         // fetched_file_data.push("priti");
                                         var file_idx = 0;
                                         var decrypted =
-                                          "data:text/csv;charset=utf-8,";
-                                        // console.log(fetched_file_data);
-                                        console.log("i", from_row);
-                                        console.log("i_to", to_row);
-                                        // console.log("j", selected_idx.length);
-                                        // console.log("j_to", to_row);
-                                        for (var i = from_row; i <= to_row; i++)
+                                          "";
+                                        for (var i = parseInt(from_row); i <= parseInt(to_row); i++)
                                          {
-                                          //  console.log(" ")
                                           for (var j = 0; j < selected_idx.length; j++) 
                                            {
-                                              // console.log("priti pagal pakka h ")
-                                            var taken_key = (i - 1) * post.col + selected_idx[j];
-                                            // console.log("taken key ", post.keys[taken_key]);
-                                            var tmp = CryptoJS.AES.decrypt(
-                                              // fetched_file_data[file_idx],
-                                              chunk_arr[taken_key],
-                                              post.keys[taken_key]
-                                            );
-                                            file_idx++;
-                                            var tmp2 = JSON.parse(
-                                              tmp.toString(CryptoJS.enc.Utf8)
-                                            );
-                                            // console.log("tmp2", tmp2);
-                                            decrypted += tmp2;
-                                            decrypted += ",";
+                                            try
+                                            {
+                                              var taken_key = (i - 1) * post.col + selected_idx[j];
+                                              var tmp = CryptoJS.AES.decrypt(
+                                                chunk_arr[taken_key],
+                                                post.keys[taken_key]
+                                              );
+                                              
+                                              file_idx++;
+                                              var tmp2 = JSON.parse(
+                                                tmp.toString(CryptoJS.enc.Utf8)
+                                              );
+                                              console.log(tmp, "tmp")
+                                              decrypted += tmp2;
+                                              decrypted += ",";
+                                              }
+                                              catch(err)
+                                            {
+                                              console.log(err);
+                                            }
                                           }
+                                          
                                           decrypted += "\n";
                                         }
-                                        console.log(decrypted, "decrypted")
-                                        var encodedUri = encodeURI(decrypted);
-                                        var link = document.createElement("a");
-                                        link.setAttribute("href", encodedUri);
-                                        link.setAttribute(
-                                          "download",
-                                          "downloaded_data.csv"
-                                        );
-                                        document.body.appendChild(link); // Required for FF
-                                        link.click(); // This will download the data file named "my_data.csv".
-                                        // })
-                                        // getData(fetched_file_hash)
+                                        var downloadLink = document.createElement("a");
+                                        var blob = new Blob(["\ufeff", decrypted]);
+                                        var url = URL.createObjectURL(blob);
+                                        downloadLink.href = url;
+                                        downloadLink.download = "data.csv";
+
+                                        document.body.appendChild(downloadLink);
+                                        downloadLink.click();
+                                        document.body.removeChild(downloadLink);
                                         
                                       });
                                   });
