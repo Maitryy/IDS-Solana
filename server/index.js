@@ -23,7 +23,7 @@ mongoose
     console.log("i'm connected!");
   })
   .catch((err) => console.log("error: ", err));
-
-app.listen(PORT, () => console.log("Server started on port:" + PORT));
+  // console.log(process.env.MDB_CONNECT)
+app.listen(PORT, () => console.log("Server started on port:" + PORT + process.env.MDB_CONNECT));
 
 app.use("/route", require("./Routes/routes.js"));
